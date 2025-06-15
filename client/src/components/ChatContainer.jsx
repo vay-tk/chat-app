@@ -11,12 +11,24 @@ const ChatContainer = () => {
   const { authUser, onlineUsers } = useContext(AuthContext)
 
   const scrollEnd = useRef();
-
+  
+  const [selectedImage, setSelectedImage] = useState(null); // for preview
   const [ input, setInput ] = useState('')
 
   //handle sending a message
   const handleSendMessage = async (e)=>{
     e.preventDefault();
+
+     if (selectedImage) {
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      await sendMessage({ image: reader.result });
+      setSelectedImage(null); // clear preview
+    };
+    reader.readAsDataURL(selectedImage.file);
+    return;
+  }
+    
     if(input.trim() === "" ) return null;
     await sendMessage({text: input.trim()})
     setInput("")
@@ -29,6 +41,8 @@ const ChatContainer = () => {
       toast.error("select an image file")
       return;
     }
+    const imageUrl = URL.createObjectURL(file);
+      setSelectedImage({ file, previewUrl: imageUrl }); // store file & preview
     const reader = new FileReader();
     reader.onloadend = async ()=>{
       await sendMessage({image: reader.result})
@@ -83,15 +97,55 @@ const ChatContainer = () => {
       </div>
 
 
-      {/* bottom area  */}
-        <div className='absolute bottom-0 left-0 right-0 flex items-center gap-3 p-3'>
-          <div className='flex-1 flex items-center bg-gray-100/12 px-3 rounded-full'>
-            <input onChange={(e)=> setInput(e.target.value)} value={input} onKeyDown={(e)=>e.key === "Enter" ? handleSendMessage(e) : null} type="text" placeholder='Send a message' className='flex-1 text-sm p-3 border-none rounded-lg outline-none text-white placeholder-gray-400' />
-            <input onChange={handleSendImage} type="file" id='image' accept='image/png, image/jpeg' hidden />
-            <label htmlFor="image"><img src={assets.gallery_icon} alt="" className='w-5 mr-2 cursor-pointer'/></label>
-          </div>
-          <img onClick={handleSendMessage} src={assets.send_button} alt="" className='w-7 cursor-pointer'/>
-        </div>
+      {/* bottom area */}
+<div className='absolute bottom-0 left-0 right-0 flex flex-col gap-2 p-3 bg-black/20 backdrop-blur-md'>
+
+  {/* Image Preview */}
+  {selectedImage && (
+    <div className="relative w-fit max-w-[180px]">
+      <img
+        src={selectedImage.previewUrl}
+        alt="Preview"
+        className="w-full max-h-[180px] rounded-xl border border-gray-400 object-cover"
+      />
+      <button
+        onClick={() => setSelectedImage(null)}
+        className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-black/80"
+      >
+        ×
+      </button>
+    </div>
+  )}
+
+  {/* Input Area */}
+  <div className='flex items-center gap-3'>
+    <div className='flex-1 flex items-center bg-gray-100/12 px-4 py-2 rounded-full'>
+      <input
+        type="text"
+        placeholder='Send a message'
+        className='flex-1 text-sm p-2 border-none rounded-lg outline-none text-white placeholder-gray-400 bg-transparent'
+        onChange={(e) => setInput(e.target.value)}
+        value={input}
+        onKeyDown={(e) => e.key === "Enter" && handleSendMessage(e)}
+      />
+      <input
+        onChange={handleSendImage}
+        type="file"
+        id='image'
+        accept='image/png, image/jpeg'
+        hidden
+      />
+      <label htmlFor="image">
+        <img src={assets.gallery_icon} alt="Gallery" className='w-6 h-6 mr-2 cursor-pointer' />
+      </label>
+    </div>
+    <img
+      onClick={handleSendMessage}
+      src={assets.send_button}
+      alt="Send"
+      className='w-8 h-8 cursor-pointer'
+    />
+  </div>
 
     </div>
   ) : (
